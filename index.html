@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Campus Lost and Found</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <header>
+        <h1>🎒 Campus Lost and Found</h1>
+        <p>Find your lost items and help others find theirs!</p>
+    </header>
+
+    <main>
+
+        <section class="form-section">
+            <h2>Report a Lost or Found Item</h2>
+
+            <form action="/" method="POST">
+
+                <label for="item_name">Item Name</label>
+                <input type="text"
+                       id="item_name"
+                       name="item_name"
+                       placeholder="Example: Water Bottle"
+                       required>
+
+                <label for="description">Item Description</label>
+                <textarea id="description"
+                          name="description"
+                          placeholder="Describe the item..."
+                          required></textarea>
+
+                <label for="location">Location</label>
+                <input type="text"
+                       id="location"
+                       name="location"
+                       placeholder="Where was it lost or found?"
+                       required>
+
+                <label for="status">Report Type</label>
+                <select id="status" name="status" required>
+                    <option value="">Select an option</option>
+                    <option value="Lost">Lost Item</option>
+                    <option value="Found">Found Item</option>
+                </select>
+
+                <button type="submit">Submit Report</button>
+
+            </form>
+        </section>
+
+        <section class="items-section">
+            <h2>Reported Items</h2>
+
+            {% if items %}
+                {% for item in items %}
+                    <div class="item-card">
+                        <h3>{{ item.item_name }}</h3>
+                        <p>{{ item.description }}</p>
+                        <p><strong>Location:</strong> {{ item.location }}</p>
+                        <p><strong>Status:</strong> {{ item.status }}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No items reported yet.</p>
+            {% endif %}
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Campus Lost and Found | Helping Students Reunite with Their Belongings</p>
+    </footer>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Campus Lost and Found</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <header>
+        <h1>🎒 Campus Lost and Found</h1>
+        <p>Find your lost items and help others find theirs!</p>
+    </header>
+
+    <main>
+
+        <section class="form-section">
+            <h2>Report a Lost or Found Item</h2>
+
+            <form action="/" method="POST">
+
+                <label for="item_name">Item Name</label>
+                <input type="text"
+                       id="item_name"
+                       name="item_name"
+                       placeholder="Example: Water Bottle"
+                       required>
+
+                <label for="description">Item Description</label>
+                <textarea id="description"
+                          name="description"
+                          placeholder="Describe the item..."
+                          required></textarea>
+
+                <label for="location">Location</label>
+                <input type="text"
+                       id="location"
+                       name="location"
+                       placeholder="Where was it lost or found?"
+                       required>
+
+                <label for="status">Report Type</label>
+                <select id="status" name="status" required>
+                    <option value="">Select an option</option>
+                    <option value="Lost">Lost Item</option>
+                    <option value="Found">Found Item</option>
+                </select>
+
+                <button type="submit">Submit Report</button>
+
+            </form>
+        </section>
+
+        <section class="items-section">
+            <h2>Reported Items</h2>
+
+            {% if items %}
+                {% for item in items %}
+                    <div class="item-card">
+                        <h3>{{ item.item_name }}</h3>
+                        <p>{{ item.description }}</p>
+                        <p><strong>Location:</strong> {{ item.location }}</p>
+                        <p><strong>Status:</strong> {{ item.status }}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No items reported yet.</p>
+            {% endif %}
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Campus Lost and Found | Helping Students Reunite with Their Belongings</p>
+    </footer>
+
+</body>
+</html>
