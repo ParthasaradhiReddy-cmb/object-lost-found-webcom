@@ -102,7 +102,9 @@ def create_tables():
     admin_password = os.environ.get("ADMIN_PASSWORD")
 
     if not admin_password:
-        raise RuntimeError("Set ADMIN_PASSWORD in Render environment variables.")
+        raise RuntimeError(
+            "Set ADMIN_PASSWORD in your environment variables."
+        )
 
     admin_email = (
         re.sub(r"[^a-z0-9]", "", admin_username.lower())
@@ -194,13 +196,14 @@ def allowed_file(filename):
 
 
 def mask_phone(phone):
+    """Mask a valid Indian mobile number for visitors."""
     if not phone:
         return "Not provided"
 
     phone = str(phone)
 
-    if len(phone) == 10:
-        return "******" + phone[-4:]
+    if re.fullmatch(r"\+91[6-9][0-9]{9}", phone):
+        return "+91******" + phone[-4:]
 
     return "Hidden"
 
@@ -429,11 +432,17 @@ HTML = """
                 <option value="Found">Found</option>
             </select>
 
-            <label>10-digit Mobile Number</label>
-            <input type="tel" name="phone"
-                   pattern="[0-9]{10}" maxlength="10"
-                   minlength="10" required
-                   placeholder="Enter 10-digit mobile number">
+            <label>Indian Mobile Number (+91)</label>
+            <input
+                type="tel"
+                name="phone"
+                pattern="\+91[6-9][0-9]{9}"
+                maxlength="13"
+                minlength="13"
+                required
+                placeholder="+919876543210"
+                title="Enter +91 followed by a valid 10-digit Indian mobile number"
+            >
 
             <label>Upload Item Image (Optional)</label>
             <input type="file" name="image"
@@ -665,6 +674,30 @@ AUTH_HTML = """
             border-radius: 7px;
         }
 
+        .password-box {
+            position: relative;
+            width: 100%;
+        }
+
+        .password-box input {
+            padding-right: 50px;
+        }
+
+        .eye-button {
+            position: absolute;
+            right: 5px;
+            top: 17px;
+            width: 40px;
+            padding: 7px;
+            background: transparent;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .eye-button:hover {
+            background: transparent;
+        }
+
         button {
             width: 100%;
             padding: 12px;
@@ -704,8 +737,22 @@ AUTH_HTML = """
             <input name="username" placeholder="Username" required>
         {% endif %}
 
-        <input name="password" type="password"
-               placeholder="Password" required>
+        <div class="password-box">
+            <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Password"
+                required
+            >
+
+            <button
+                type="button"
+                class="eye-button"
+                onclick="togglePassword()"
+                aria-label="Show password"
+            >👁</button>
+        </div>
 
         <button type="submit">{{ title }}</button>
     </form>
@@ -720,6 +767,23 @@ AUTH_HTML = """
 
 </div>
 
+<script>
+function togglePassword() {
+    const password = document.getElementById("password");
+    const eye = document.querySelector(".eye-button");
+
+    if (password.type === "password") {
+        password.type = "text";
+        eye.textContent = "🙈";
+        eye.setAttribute("aria-label", "Hide password");
+    } else {
+        password.type = "password";
+        eye.textContent = "👁";
+        eye.setAttribute("aria-label", "Show password");
+    }
+}
+</script>
+
 </body>
 </html>
 """
@@ -730,605 +794,4 @@ AUTH_HTML = """
 # --------------------------------------------------
 
 ADMIN_HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <style>
-        body {
-            font-family: Arial;
-            background: #f1f5f9;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .box {
-            max-width: 1000px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        th, td {
-            padding: 12px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #123b63;
-            color: white;
-        }
-
-        button {
-            padding: 8px 12px;
-            background: #dc2626;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        a {
-            display: inline-block;
-            margin: 10px 0;
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="box">
-
-    <h1>Admin Dashboard</h1>
-
-    <p>Welcome, {{ user["username"] }}</p>
-
-    <a href="/">Back to Website</a>
-    <button onclick="logout()">Logout</button>
-
-    <h2>Registered Students</h2>
-
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-
-        <tbody id="users"></tbody>
-    </table>
-
-</div>
-
-<script>
-
-async function loadUsers() {
-    const response = await fetch("/api/admin/users");
-    const users = await response.json();
-
-    const tbody = document.getElementById("users");
-    tbody.innerHTML = "";
-
-    users.forEach(user => {
-        const row = document.createElement("tr");
-
-        const id = document.createElement("td");
-        id.textContent = user.id;
-
-        const username = document.createElement("td");
-        username.textContent = user.username;
-
-        const email = document.createElement("td");
-        email.textContent = user.email;
-
-        const action = document.createElement("td");
-
-        const button = document.createElement("button");
-
-        if (user.role === "admin") {
-            button.textContent = "Admin";
-            button.disabled = true;
-        } else {
-            button.textContent = "Delete User";
-            button.onclick = () => deleteUser(user.id);
-        }
-
-        action.appendChild(button);
-
-        row.appendChild(id);
-        row.appendChild(username);
-        row.appendChild(email);
-        row.appendChild(action);
-
-        tbody.appendChild(row);
-    });
-}
-
-
-async function deleteUser(id) {
-    if (!confirm("Delete this student account?")) return;
-
-    const response = await fetch("/api/admin/users/" + id, {
-        method: "DELETE"
-    });
-
-    const result = await response.json();
-
-    if (response.ok) {
-        alert("Student account deleted.");
-        loadUsers();
-    } else {
-        alert(result.error || "Unable to delete user.");
-    }
-}
-
-
-async function logout() {
-    await fetch("/api/logout", {method: "POST"});
-    window.location.href = "/";
-}
-
-loadUsers();
-
-</script>
-
-</body>
-</html>
-"""
-
-
-# --------------------------------------------------
-# HOME PAGE
-# --------------------------------------------------
-
-@app.route("/")
-def home():
-    user = get_current_user()
-    return render_template_string(HTML, user=user)
-
-
-# --------------------------------------------------
-# STUDENT REGISTRATION
-# --------------------------------------------------
-
-@app.route("/register", methods=["GET", "POST"])
-def register():
-
-    if request.method == "POST":
-
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-
-        if not username or not email or not password:
-            flash("All fields are required.")
-            return redirect(url_for("register"))
-
-        if len(password) < 8:
-            flash("Password must contain at least 8 characters.")
-            return redirect(url_for("register"))
-
-        conn = get_db()
-
-        try:
-            conn.execute("""
-                INSERT INTO users
-                (username, email, password_hash, role)
-                VALUES (?, ?, ?, 'user')
-            """, (
-                username,
-                email,
-                generate_password_hash(password)
-            ))
-
-            conn.commit()
-
-            flash("Registration successful. Please login.")
-            return redirect(url_for("login"))
-
-        except sqlite3.IntegrityError:
-            flash("Username or email already exists.")
-
-        finally:
-            conn.close()
-
-    return render_template_string(
-        AUTH_HTML,
-        title="Student Registration",
-        register=True
-    )
-
-
-# --------------------------------------------------
-# STUDENT LOGIN
-# --------------------------------------------------
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-
-    if request.method == "POST":
-
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-
-        conn = get_db()
-
-        user = conn.execute(
-            "SELECT * FROM users WHERE username = ?",
-            (username,)
-        ).fetchone()
-
-        conn.close()
-
-        if user and user["role"] == "user" and check_password_hash(
-            user["password_hash"], password
-        ):
-            session.clear()
-            session["user_id"] = user["id"]
-            return redirect(url_for("home"))
-
-        flash("Invalid student username or password.")
-
-    return render_template_string(
-        AUTH_HTML,
-        title="Student Login",
-        register=False
-    )
-
-
-# --------------------------------------------------
-# SEPARATE ADMIN LOGIN
-# --------------------------------------------------
-
-@app.route("/admin/login", methods=["GET", "POST"])
-def admin_login():
-
-    if request.method == "POST":
-
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-
-        conn = get_db()
-
-        user = conn.execute(
-            "SELECT * FROM users WHERE username = ?",
-            (username,)
-        ).fetchone()
-
-        conn.close()
-
-        if user and user["role"] == "admin" and check_password_hash(
-            user["password_hash"], password
-        ):
-            session.clear()
-            session["user_id"] = user["id"]
-            return redirect(url_for("admin_dashboard"))
-
-        flash("Invalid admin username or password.")
-
-    return render_template_string(
-        AUTH_HTML,
-        title="Admin Login",
-        register=False
-    )
-
-
-# --------------------------------------------------
-# ADMIN DASHBOARD
-# --------------------------------------------------
-
-@app.route("/admin")
-def admin_dashboard():
-
-    user = get_current_user()
-
-    if not user or user["role"] != "admin":
-        return redirect(url_for("admin_login"))
-
-    return render_template_string(ADMIN_HTML, user=user)
-
-
-# --------------------------------------------------
-# LOGOUT
-# --------------------------------------------------
-
-@app.route("/api/logout", methods=["POST"])
-def logout():
-    session.clear()
-    return jsonify({"message": "Logged out successfully."})
-
-
-# --------------------------------------------------
-# IMAGE UPLOAD ACCESS
-# --------------------------------------------------
-
-@app.route("/uploads/<filename>")
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
-
-# --------------------------------------------------
-# ADD AND VIEW ITEMS
-# --------------------------------------------------
-
-@app.route("/api/items", methods=["GET", "POST"])
-def items():
-
-    if request.method == "POST":
-
-        if not session.get("user_id"):
-            return jsonify({"error": "Please login first."}), 401
-
-        name = request.form.get("name", "").strip()
-        description = request.form.get("description", "").strip()
-        location = request.form.get("location", "").strip()
-        item_type = request.form.get("item_type", "").strip()
-        phone = request.form.get("phone", "").strip()
-
-        if not name or not location or not phone:
-            return jsonify({"error": "Please fill all required fields."}), 400
-
-        if not re.fullmatch(r"[0-9]{10}", phone):
-            return jsonify({
-                "error": "Enter a valid 10-digit mobile number."
-            }), 400
-
-        if item_type not in ("Lost", "Found"):
-            return jsonify({"error": "Invalid item type."}), 400
-
-        image_filename = None
-        uploaded_file = request.files.get("image")
-
-        if uploaded_file and uploaded_file.filename:
-
-            if not allowed_file(uploaded_file.filename):
-                return jsonify({
-                    "error": "Only JPG, JPEG, PNG, GIF and WEBP images are allowed."
-                }), 400
-
-            original_name = secure_filename(uploaded_file.filename)
-            extension = original_name.rsplit(".", 1)[1].lower()
-            image_filename = str(uuid.uuid4()) + "." + extension
-
-            uploaded_file.save(
-                os.path.join(UPLOAD_FOLDER, image_filename)
-            )
-
-        conn = get_db()
-
-        conn.execute("""
-            INSERT INTO items
-            (name, description, location, item_type,
-             phone, user_id, image_filename)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            name,
-            description,
-            location,
-            item_type,
-            phone,
-            session["user_id"],
-            image_filename
-        ))
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({"message": "Item added successfully."})
-
-    search = request.args.get("search", "").strip()
-    item_type = request.args.get("type", "").strip()
-
-    conn = get_db()
-
-    query = "SELECT * FROM items WHERE 1=1"
-    params = []
-
-    if search:
-        query += " AND (name LIKE ? OR location LIKE ? OR description LIKE ?)"
-        term = "%" + search + "%"
-        params.extend([term, term, term])
-
-    if item_type in ("Lost", "Found"):
-        query += " AND item_type = ?"
-        params.append(item_type)
-
-    query += " ORDER BY id DESC"
-
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
-
-    user = get_current_user()
-    is_admin = bool(user and user["role"] == "admin")
-
-    result = []
-
-    for row in rows:
-        data = item_to_dict(row)
-
-        data["can_recover"] = bool(
-            user and (
-                is_admin or row["user_id"] == user["id"]
-            )
-        )
-
-        data["can_delete"] = is_admin
-
-        result.append(data)
-
-    return jsonify(result)
-
-
-# --------------------------------------------------
-# MARK ITEM AS RECOVERED
-# --------------------------------------------------
-
-@app.route("/api/items/<int:item_id>/recover", methods=["POST"])
-@login_required
-def recover_item(item_id):
-
-    user = get_current_user()
-
-    conn = get_db()
-
-    item = conn.execute(
-        "SELECT * FROM items WHERE id = ?",
-        (item_id,)
-    ).fetchone()
-
-    if not item:
-        conn.close()
-        return jsonify({"error": "Item not found."}), 404
-
-    if user["role"] != "admin" and item["user_id"] != user["id"]:
-        conn.close()
-        return jsonify({
-            "error": "Only the report owner or admin can recover this item."
-        }), 403
-
-    conn.execute(
-        "UPDATE items SET status = 'Recovered' WHERE id = ?",
-        (item_id,)
-    )
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({"message": "Item marked as recovered."})
-
-
-# --------------------------------------------------
-# ADMIN DELETE ITEM
-# --------------------------------------------------
-
-@app.route("/api/items/<int:item_id>", methods=["DELETE"])
-@admin_required
-def delete_item(item_id):
-
-    conn = get_db()
-
-    item = conn.execute(
-        "SELECT image_filename FROM items WHERE id = ?",
-        (item_id,)
-    ).fetchone()
-
-    if not item:
-        conn.close()
-        return jsonify({"error": "Item not found."}), 404
-
-    filename = item["image_filename"]
-
-    conn.execute("DELETE FROM items WHERE id = ?", (item_id,))
-    conn.commit()
-    conn.close()
-
-    if filename:
-        image_path = os.path.join(UPLOAD_FOLDER, filename)
-
-        if os.path.exists(image_path):
-            os.remove(image_path)
-
-    return jsonify({"message": "Item deleted successfully."})
-
-
-# --------------------------------------------------
-# ADMIN VIEW STUDENTS
-# --------------------------------------------------
-
-@app.route("/api/admin/users")
-@admin_required
-def admin_users():
-
-    conn = get_db()
-
-    users = conn.execute("""
-        SELECT id, username, email, role
-        FROM users
-        ORDER BY id DESC
-    """).fetchall()
-
-    conn.close()
-
-    return jsonify([dict(user) for user in users])
-
-
-# --------------------------------------------------
-# ADMIN DELETE STUDENT
-# --------------------------------------------------
-
-@app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
-@admin_required
-def admin_delete_user(user_id):
-
-    conn = get_db()
-
-    user = conn.execute(
-        "SELECT * FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-
-    if not user:
-        conn.close()
-        return jsonify({"error": "User not found."}), 404
-
-    if user["role"] == "admin":
-        conn.close()
-        return jsonify({"error": "Admin accounts cannot be deleted here."}), 403
-
-    # Remove the user's reports and uploaded images.
-    items = conn.execute(
-        "SELECT image_filename FROM items WHERE user_id = ?",
-        (user_id,)
-    ).fetchall()
-
-    conn.execute("DELETE FROM items WHERE user_id = ?", (user_id,))
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-
-    conn.commit()
-    conn.close()
-
-    for item in items:
-        filename = item["image_filename"]
-
-        if filename:
-            image_path = os.path.join(UPLOAD_FOLDER, filename)
-
-            if os.path.exists(image_path):
-                os.remove(image_path)
-
-    return jsonify({"message": "Student account deleted."})
-
-
-# --------------------------------------------------
-# FILE SIZE ERROR
-# --------------------------------------------------
-
-@app.errorhandler(413)
-def file_too_large(error):
-    return jsonify({
-        "error": "Image is too large. Maximum file size is 5 MB."
-    }), 413
-
-
-# --------------------------------------------------
-# START APPLICATION
-# --------------------------------------------------
-
-create_tables()
-
-if __name__ == "__main__":
-    app.run(debug=False)
+<!DOCTYPE html
