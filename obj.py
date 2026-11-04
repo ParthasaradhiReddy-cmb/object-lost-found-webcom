@@ -774,7 +774,7 @@ function togglePassword() {
 
     if (password.type === "password") {
         password.type = "text";
-        eye.textContent = "🙈";
+        eye.textContent = "👁";
         eye.setAttribute("aria-label", "Hide password");
     } else {
         password.type = "password";
